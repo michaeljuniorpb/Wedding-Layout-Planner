@@ -85,5 +85,24 @@ export const DEFAULT_ELEMENTS: Record<string, Partial<LayoutElement>> = {
     chairCount: 10,
     color: '#fef3c7',
     label: 'Bridal Table',
+  },
+  'custom-rect': {
+    type: 'custom-rect',
+    width: 2,
+    height: 2,
+    color: '#f3f4f6',
+    label: 'Custom Rect',
+  },
+  'custom-triangle': {
+    type: 'custom-triangle',
+    radius: 1, // radius for RegularPolygon
+    color: '#f3f4f6',
+    label: 'Custom Triangle',
+  },
+  'custom-hexagon': {
+    type: 'custom-hexagon',
+    radius: 1, // radius for RegularPolygon
+    color: '#f3f4f6',
+    label: 'Custom Hexagon',
   }
 };

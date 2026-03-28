@@ -10,7 +10,10 @@ export type ElementType =
   | 'buffet'
   | 'bar'
   | 'cake-table'
-  | 'vip-table';
+  | 'vip-table'
+  | 'custom-rect'
+  | 'custom-triangle'
+  | 'custom-hexagon';
 
 export interface LayoutElement {
   id: string;
@@ -22,8 +25,10 @@ export interface LayoutElement {
   height: number; // in meters
   radius?: number; // in meters (for round tables)
   chairCount?: number;
+  chairLabels?: string[];
   color?: string;
   label?: string;
+  groupId?: string;
 }
 
 export interface VenueDimensions {

@@ -23,6 +23,8 @@ export default function App() {
   const [savedLayouts, setSavedLayouts] = useState<WeddingLayout[]>([]);
   const [currentLayoutId, setCurrentLayoutId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [guides, setGuides] = useState<number[][]>([]);
+  const [clipboard, setClipboard] = useState<LayoutElement[]>([]);
   
   const stageRef = useRef<any>(null);
   const transformerRef = useRef<any>(null);
@@ -58,12 +60,21 @@ export default function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.activeElement?.tagName === 'INPUT') return;
+
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0) {
-        // Don't delete if user is typing in an input
-        if (document.activeElement?.tagName === 'INPUT') return;
-        
         setElements(prev => prev.filter(el => !selectedIds.includes(el.id)));
         setSelectedIds([]);
+      }
+
+      // Copy: Ctrl+C or Cmd+C
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        handleCopy();
+      }
+
+      // Paste: Ctrl+V or Cmd+V
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        handlePaste();
       }
     };
 
@@ -154,13 +165,71 @@ export default function App() {
   const singleSelectedElement = selectedIds.length === 1 ? selectedElements[0] : null;
 
   const handleSelect = (id: string, isMulti: boolean) => {
-    if (isMulti) {
-      setSelectedIds(prev => 
-        prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]
-      );
-    } else {
-      setSelectedIds([id]);
+    const el = elements.find(e => e.id === id);
+    if (!el) return;
+
+    let idsToSelect = [id];
+    if (el.groupId) {
+      idsToSelect = elements.filter(e => e.groupId === el.groupId).map(e => e.id);
     }
+
+    if (isMulti) {
+      setSelectedIds(prev => {
+        const alreadySelected = idsToSelect.every(sid => prev.includes(sid));
+        if (alreadySelected) {
+          return prev.filter(sid => !idsToSelect.includes(sid));
+        } else {
+          return [...new Set([...prev, ...idsToSelect])];
+        }
+      });
+    } else {
+      setSelectedIds(idsToSelect);
+    }
+  };
+
+  const handleGroup = () => {
+    if (selectedIds.length < 2) return;
+    const groupId = Math.random().toString(36).substr(2, 9);
+    setElements(prev => prev.map(el => 
+      selectedIds.includes(el.id) ? { ...el, groupId } : el
+    ));
+  };
+
+  const handleUngroup = () => {
+    if (selectedIds.length === 0) return;
+    setElements(prev => prev.map(el => 
+      selectedIds.includes(el.id) ? { ...el, groupId: undefined } : el
+    ));
+  };
+
+  const handleCopy = () => {
+    if (selectedIds.length === 0) return;
+    const selectedElements = elements.filter(el => selectedIds.includes(el.id));
+    setClipboard(selectedElements);
+  };
+
+  const handlePaste = () => {
+    if (clipboard.length === 0) return;
+
+    // Map old group IDs to new group IDs to maintain grouping in pasted elements
+    const groupMap: Record<string, string> = {};
+    clipboard.forEach(el => {
+      if (el.groupId && !groupMap[el.groupId]) {
+        groupMap[el.groupId] = Math.random().toString(36).substr(2, 9);
+      }
+    });
+
+    const offset = 20; // Offset pasted elements slightly
+    const newElements = clipboard.map(el => ({
+      ...el,
+      id: Math.random().toString(36).substr(2, 9),
+      x: el.x + offset,
+      y: el.y + offset,
+      groupId: el.groupId ? groupMap[el.groupId] : undefined,
+    }));
+
+    setElements(prev => [...prev, ...newElements]);
+    setSelectedIds(newElements.map(el => el.id));
   };
 
   const handleUpdateMany = (ids: string[], attrs: Partial<LayoutElement>) => {
@@ -265,6 +334,73 @@ export default function App() {
     return Math.sqrt(dx * dx + dy * dy) / SCALE;
   };
 
+  const handleCanvasDragMove = (id: string, x: number, y: number) => {
+    const draggedEl = elements.find(el => el.id === id);
+    if (!draggedEl) return;
+
+    const SNAP_THRESHOLD = 5;
+    const newGuides: number[][] = [];
+    
+    const draggedWidth = (draggedEl.width || 1) * SCALE;
+    const draggedHeight = (draggedEl.height || 1) * SCALE;
+    
+    const draggedBounds = {
+      vertical: [x - draggedWidth / 2, x, x + draggedWidth / 2],
+      horizontal: [y - draggedHeight / 2, y, y + draggedHeight / 2],
+    };
+
+    let snappedX = x;
+    let snappedY = y;
+
+    elements.forEach(el => {
+      if (el.id === id || selectedIds.includes(el.id)) return;
+
+      const elWidth = (el.width || 1) * SCALE;
+      const elHeight = (el.height || 1) * SCALE;
+      
+      const elBounds = {
+        vertical: [el.x - elWidth / 2, el.x, el.x + elWidth / 2],
+        horizontal: [el.y - elHeight / 2, el.y, el.y + elHeight / 2],
+      };
+
+      // Check vertical alignment (X axis)
+      draggedBounds.vertical.forEach((dv, i) => {
+        elBounds.vertical.forEach((ev) => {
+          if (Math.abs(dv - ev) < SNAP_THRESHOLD) {
+            const offset = ev - dv;
+            snappedX = x + offset;
+            newGuides.push([ev, 0, ev, dimensions.height]);
+          }
+        });
+      });
+
+      // Check horizontal alignment (Y axis)
+      draggedBounds.horizontal.forEach((dh, i) => {
+        elBounds.horizontal.forEach((eh) => {
+          if (Math.abs(dh - eh) < SNAP_THRESHOLD) {
+            const offset = eh - dh;
+            snappedY = y + offset;
+            newGuides.push([0, eh, dimensions.width, eh]);
+          }
+        });
+      });
+    });
+
+    // Update the node position directly for visual snapping
+    const node = stageRef.current.findOne(`#${id}`);
+    if (node) {
+      node.x(snappedX);
+      node.y(snappedY);
+    }
+
+    setGuides(newGuides);
+  };
+
+  const handleCanvasDragEnd = (id: string, x: number, y: number) => {
+    setGuides([]);
+    // The actual state update is handled by CanvasElement's onDragEnd calling onChange
+  };
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#f8f9fa]">
       <Sidebar 
@@ -291,6 +427,12 @@ export default function App() {
         onDeleteLayout={handleDeleteLayout}
         isSaving={isSaving}
         onExportPDF={handleExportPDF}
+        onGroup={handleGroup}
+        onUngroup={handleUngroup}
+        onCopy={handleCopy}
+        onPaste={handlePaste}
+        hasClipboard={clipboard.length > 0}
+        hasGroupedSelection={selectedElements.some(el => !!el.groupId)}
       />
       
       <main className="flex-1 relative overflow-hidden canvas-container">
@@ -370,6 +512,8 @@ export default function App() {
                 onChange={(attrs) => updateElement(el.id, attrs)}
                 onUpdateMany={(attrs) => handleUpdateMany(selectedIds, attrs)}
                 onMoveMany={(dx, dy) => handleMoveMany(selectedIds, dx, dy)}
+                onDragMove={handleCanvasDragMove}
+                onDragEnd={handleCanvasDragEnd}
                 selectedIds={selectedIds}
                 draggable={!isRulerActive}
               />
@@ -386,7 +530,29 @@ export default function App() {
               anchorFill="#ffffff"
               borderStroke="#d4af37"
               borderDash={[3, 3]}
+              rotationSnaps={[0, 90, 180, 270]}
+              rotationSnapTolerance={5}
+              onTransform={(e) => {
+                const node = e.target;
+                const rotation = node.rotation();
+                const normalizedRotation = ((rotation % 360) + 360) % 360;
+                
+                const snapAngles = [0, 90, 180, 270, 360];
+                const isSnapped = snapAngles.some(angle => Math.abs(normalizedRotation - angle) < 1);
+
+                if (isSnapped) {
+                  const x = node.x();
+                  const y = node.y();
+                  setGuides([
+                    [x, 0, x, dimensions.height],
+                    [0, y, dimensions.width, y]
+                  ]);
+                } else {
+                  setGuides([]);
+                }
+              }}
               onTransformEnd={(e) => {
+                setGuides([]);
                 if (selectedIds.length === 1) {
                   const node = stageRef.current.findOne(`#${selectedIds[0]}`);
                   if (node) {
@@ -405,6 +571,21 @@ export default function App() {
               }}
             />
           </Layer>
+          
+          {/* Guides Layer */}
+          <Layer>
+            {guides.map((points, i) => (
+              <Line
+                key={`guide-${i}`}
+                points={points}
+                stroke="#d4af37"
+                strokeWidth={1}
+                dash={[4, 4]}
+                opacity={0.6}
+              />
+            ))}
+          </Layer>
+
           {isRulerActive && rulerPoints.length === 4 && (
             <Layer>
               <Line

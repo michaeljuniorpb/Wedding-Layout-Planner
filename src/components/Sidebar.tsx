@@ -1,6 +1,6 @@
 import React from 'react';
 import { LayoutElement, ElementType, VenueDimensions, WeddingLayout } from '../types';
-import { Square, Circle, Layout, Users, Trash2, Plus, Wine, Utensils, Heart, Star, Columns, Armchair, Palette, Ruler, Save, Download, LogOut, LogIn, FileText, Loader2 } from 'lucide-react';
+import { Square, Circle, Layout, Users, Trash2, Plus, Wine, Utensils, Heart, Star, Columns, Armchair, Palette, Ruler, Save, Download, LogOut, LogIn, FileText, Loader2, Copy, ClipboardPaste, Triangle, Hexagon } from 'lucide-react';
 import { User } from 'firebase/auth';
 
 interface SidebarProps {
@@ -24,6 +24,12 @@ interface SidebarProps {
   onDeleteLayout: (id: string) => void;
   isSaving: boolean;
   onExportPDF: () => void;
+  onGroup: () => void;
+  onUngroup: () => void;
+  onCopy: () => void;
+  onPaste: () => void;
+  hasClipboard: boolean;
+  hasGroupedSelection: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -46,7 +52,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onLoad,
   onDeleteLayout,
   isSaving,
-  onExportPDF
+  onExportPDF,
+  onGroup,
+  onUngroup,
+  onCopy,
+  onPaste,
+  hasClipboard,
+  hasGroupedSelection
 }) => {
   const [layoutName, setLayoutName] = React.useState('My Wedding Layout');
   return (
@@ -304,6 +316,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </section>
 
+        {/* Custom Shapes Section */}
+        <section>
+          <h2 className="text-xs font-mono text-gray-400 uppercase tracking-wider mb-4">Custom Shapes</h2>
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => onAddElement('custom-rect')} className="flex items-center gap-2 p-3 bg-white border border-gray-100 rounded-xl hover:border-[#d4af37] hover:shadow-md transition-all group">
+              <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center group-hover:bg-[#fdf8e6]">
+                <Square className="w-4 h-4 text-gray-400 group-hover:text-[#d4af37]" />
+              </div>
+              <span className="text-xs font-medium text-gray-600">Rectangle</span>
+            </button>
+            <button onClick={() => onAddElement('custom-triangle')} className="flex items-center gap-2 p-3 bg-white border border-gray-100 rounded-xl hover:border-[#d4af37] hover:shadow-md transition-all group">
+              <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center group-hover:bg-[#fdf8e6]">
+                <Triangle className="w-4 h-4 text-gray-400 group-hover:text-[#d4af37]" />
+              </div>
+              <span className="text-xs font-medium text-gray-600">Triangle</span>
+            </button>
+            <button onClick={() => onAddElement('custom-hexagon')} className="flex items-center gap-2 p-3 bg-white border border-gray-100 rounded-xl hover:border-[#d4af37] hover:shadow-md transition-all group">
+              <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center group-hover:bg-[#fdf8e6]">
+                <Hexagon className="w-4 h-4 text-gray-400 group-hover:text-[#d4af37]" />
+              </div>
+              <span className="text-xs font-medium text-gray-600">Hexagon</span>
+            </button>
+          </div>
+        </section>
+
         {/* Templates Section */}
         <section>
           <h2 className="text-xs font-mono text-gray-400 uppercase tracking-wider mb-4">Templates</h2>
@@ -332,23 +369,67 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </section>
 
         {/* Properties Section */}
-        {multiSelectedCount > 1 && (
+        { (multiSelectedCount > 0 || hasClipboard) && (
           <section className="pt-6 border-t border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xs font-mono text-gray-400 uppercase tracking-wider">Selection ({multiSelectedCount})</h2>
-              <button 
-                onClick={onDeleteSelected}
-                className="text-red-400 hover:text-red-600 transition-colors flex items-center gap-1 text-[10px] font-bold uppercase"
-              >
-                <Trash2 className="w-4 h-4" /> Delete All
-              </button>
+              <div className="flex gap-2 flex-wrap">
+                {multiSelectedCount > 0 && (
+                  <button 
+                    onClick={onCopy}
+                    className="p-1.5 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1 text-[10px] font-bold uppercase"
+                    title="Copy Selection (Ctrl+C)"
+                  >
+                    <Copy className="w-3 h-3" /> Copy
+                  </button>
+                )}
+                {hasClipboard && (
+                  <button 
+                    onClick={onPaste}
+                    className="p-1.5 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1 text-[10px] font-bold uppercase"
+                    title="Paste Selection (Ctrl+V)"
+                  >
+                    <ClipboardPaste className="w-3 h-3" /> Paste
+                  </button>
+                )}
+                {multiSelectedCount > 1 && !hasGroupedSelection && (
+                  <button 
+                    onClick={onGroup}
+                    className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1 text-[10px] font-bold uppercase"
+                    title="Group Elements"
+                  >
+                    <Plus className="w-3 h-3" /> Group
+                  </button>
+                )}
+                {hasGroupedSelection && (
+                  <button 
+                    onClick={onUngroup}
+                    className="p-1.5 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition-colors flex items-center gap-1 text-[10px] font-bold uppercase"
+                    title="Ungroup Elements"
+                  >
+                    <Trash2 className="w-3 h-3" /> Ungroup
+                  </button>
+                )}
+                {multiSelectedCount > 0 && (
+                  <button 
+                    onClick={onDeleteSelected}
+                    className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-1 text-[10px] font-bold uppercase"
+                    title="Delete Selection"
+                  >
+                    <Trash2 className="w-3 h-3" /> Delete
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="p-4 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-              <p className="text-[10px] text-gray-400 text-center leading-relaxed">
-                Multiple elements selected. Drag any selected element to move the entire group.
-                Press <kbd className="px-1 bg-white border rounded shadow-sm">Del</kbd> to remove them.
-              </p>
-            </div>
+            
+            {multiSelectedCount > 1 && (
+              <div className="p-4 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                <p className="text-[10px] text-gray-400 text-center leading-relaxed">
+                  Multiple elements selected. Drag any selected element to move the entire group.
+                  {hasGroupedSelection ? ' These elements are currently grouped.' : ' You can group them to move them together in the future.'}
+                </p>
+              </div>
+            )}
           </section>
         )}
 
@@ -385,20 +466,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 />
               </div>
 
-              {selectedElement.type === 'round-table' && (
+              {(selectedElement.type === 'round-table' || selectedElement.type === 'cake-table' || selectedElement.type === 'custom-triangle' || selectedElement.type === 'custom-hexagon') && (
                 <div>
-                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Diameter (m)</label>
+                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">
+                    {selectedElement.type === 'custom-triangle' || selectedElement.type === 'custom-hexagon' ? 'Size (Radius m)' : 'Diameter (m)'}
+                  </label>
                   <input 
                     type="number" 
                     step="0.1"
-                    value={(selectedElement.radius || 0) * 2} 
-                    onChange={(e) => onUpdate(selectedElement.id, { radius: parseFloat(e.target.value) / 2 })}
+                    value={selectedElement.type === 'custom-triangle' || selectedElement.type === 'custom-hexagon' ? selectedElement.radius : (selectedElement.radius || 0) * 2} 
+                    onChange={(e) => onUpdate(selectedElement.id, { radius: selectedElement.type === 'custom-triangle' || selectedElement.type === 'custom-hexagon' ? parseFloat(e.target.value) : parseFloat(e.target.value) / 2 })}
                     className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#d4af37]"
                   />
                 </div>
               )}
 
-              {(selectedElement.type === 'long-table' || selectedElement.type === 'stage' || selectedElement.type === 'dance-floor') && (
+              {(selectedElement.type === 'long-table' || 
+                selectedElement.type === 'stage' || 
+                selectedElement.type === 'dance-floor' || 
+                selectedElement.type === 'aisle' || 
+                selectedElement.type === 'arch' || 
+                selectedElement.type === 'buffet' || 
+                selectedElement.type === 'bar' || 
+                selectedElement.type === 'vip-table' ||
+                selectedElement.type === 'centerpiece' ||
+                selectedElement.type === 'custom-rect' ||
+                selectedElement.type === 'chair') && (
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Width (m)</label>
@@ -424,14 +517,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )}
 
               {(selectedElement.type === 'round-table' || selectedElement.type === 'long-table' || selectedElement.type === 'vip-table') && (
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Chair Count</label>
-                  <input 
-                    type="number" 
-                    value={selectedElement.chairCount || 0} 
-                    onChange={(e) => onUpdate(selectedElement.id, { chairCount: parseInt(e.target.value) })}
-                    className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#d4af37]"
-                  />
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Chair Count</label>
+                    <input 
+                      type="number" 
+                      value={selectedElement.chairCount || 0} 
+                      onChange={(e) => onUpdate(selectedElement.id, { chairCount: parseInt(e.target.value) })}
+                      className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#d4af37]"
+                    />
+                  </div>
+                  
+                  {selectedElement.chairCount && selectedElement.chairCount > 0 && (
+                    <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                      <label className="block text-[10px] font-bold uppercase text-gray-400 mb-2 flex items-center gap-1">
+                        <Users className="w-3 h-3" /> Seating List (Guest Names)
+                      </label>
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                        {Array.from({ length: selectedElement.chairCount }).map((_, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="text-[9px] font-mono text-gray-400 w-4">{i + 1}</span>
+                            <input 
+                              type="text" 
+                              placeholder={`Guest Name ${i + 1}`}
+                              value={selectedElement.chairLabels?.[i] || ''} 
+                              onChange={(e) => {
+                                const newLabels = [...(selectedElement.chairLabels || [])];
+                                newLabels[i] = e.target.value;
+                                onUpdate(selectedElement.id, { chairLabels: newLabels });
+                              }}
+                              className="flex-1 p-1.5 text-[10px] border border-gray-200 rounded-md focus:outline-none focus:border-[#d4af37] bg-white"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
