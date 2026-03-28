@@ -1,0 +1,56 @@
+{
+  "entities": {
+    "LayoutElement": {
+      "title": "LayoutElement",
+      "description": "A single element in the wedding layout (table, chair, etc.)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "rotation": { "type": "number" },
+        "width": { "type": "number" },
+        "height": { "type": "number" },
+        "radius": { "type": "number" },
+        "chairCount": { "type": "number" },
+        "color": { "type": "string" },
+        "label": { "type": "string" }
+      },
+      "required": ["id", "type", "x", "y", "rotation", "width", "height"]
+    },
+    "VenueDimensions": {
+      "title": "VenueDimensions",
+      "description": "The dimensions of the wedding venue",
+      "type": "object",
+      "properties": {
+        "width": { "type": "number" },
+        "height": { "type": "number" }
+      },
+      "required": ["width", "height"]
+    },
+    "WeddingLayout": {
+      "title": "WeddingLayout",
+      "description": "A complete wedding venue layout",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "elements": {
+          "type": "array",
+          "items": { "$ref": "LayoutElement" }
+        },
+        "venueDimensions": { "$ref": "VenueDimensions" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "elements", "venueDimensions"]
+    }
+  },
+  "firestore": {
+    "/layouts/{layoutId}": {
+      "schema": "WeddingLayout",
+      "description": "Stored wedding layouts"
+    }
+  }
+}
