@@ -12,6 +12,7 @@ interface ElementProps {
   onDragStart?: (id: string) => void;
   onDragMove?: (id: string, x: number, y: number) => void;
   onDragEnd?: (id: string, x: number, y: number) => void;
+  onDblClick?: (id: string, x: number, y: number, width: number, height: number, text: string) => void;
   selectedIds: string[];
   draggable?: boolean;
 }
@@ -26,10 +27,12 @@ export const CanvasElement: React.FC<ElementProps> = ({
   onDragStart,
   onDragMove,
   onDragEnd,
+  onDblClick,
   selectedIds,
   draggable = true
 }) => {
-  const isRound = element.type === 'round-table' || element.type === 'cake-table' || element.type === 'custom-hexagon' || element.type === 'custom-triangle';
+  const isRound = element.type === 'round-table' || element.type === 'cake-table' || element.type === 'custom-circle';
+  const isTextBox = element.type === 'text-box';
   
   const handleDragStart = (e: any) => {
     if (onDragStart) {
@@ -58,6 +61,21 @@ export const CanvasElement: React.FC<ElementProps> = ({
   const handleSelect = (e: any) => {
     const isMulti = e.evt.shiftKey || e.evt.metaKey || e.evt.ctrlKey;
     onSelect(isMulti);
+  };
+
+  const handleDblClick = (e: any) => {
+    if (onDblClick && (element.type === 'text-box' || element.label)) {
+      const absPos = e.target.getAbsolutePosition();
+      
+      onDblClick(
+        element.id,
+        absPos.x,
+        absPos.y,
+        element.width * SCALE,
+        element.height * SCALE,
+        element.type === 'text-box' ? (element.text || '') : (element.label || '')
+      );
+    }
   };
 
   const renderChairs = () => {
@@ -225,6 +243,38 @@ export const CanvasElement: React.FC<ElementProps> = ({
       );
     }
 
+    if (isTextBox) {
+      const isEmpty = !element.text || element.text.trim() === '';
+      return (
+        <Group>
+          <Rect
+            width={element.width * SCALE}
+            height={element.height * SCALE}
+            x={-(element.width * SCALE) / 2}
+            y={-(element.height * SCALE) / 2}
+            fill={isEmpty ? 'rgba(0,0,0,0.02)' : 'transparent'}
+            stroke={isSelected ? '#d4af37' : (isEmpty ? '#e5e7eb' : 'transparent')}
+            strokeWidth={1}
+            dash={isSelected || isEmpty ? [5, 5] : undefined}
+          />
+          <Text
+            text={isEmpty ? (isSelected ? '' : 'Empty Text Box') : element.text}
+            fontSize={element.fontSize || 16}
+            fontFamily={element.fontFamily || 'Inter'}
+            fontStyle={`${element.isItalic ? 'italic ' : ''}${element.isBold ? 'bold' : ''}`.trim() || 'normal'}
+            fill={isEmpty ? '#d1d5db' : (element.color || '#000000')}
+            align={element.textAlign || 'center'}
+            width={element.width * SCALE}
+            height={element.height * SCALE}
+            x={-(element.width * SCALE) / 2}
+            y={-(element.height * SCALE) / 2}
+            verticalAlign="middle"
+            padding={5}
+          />
+        </Group>
+      );
+    }
+
     if (element.type === 'arch') {
       return (
         <Group>
@@ -295,21 +345,23 @@ export const CanvasElement: React.FC<ElementProps> = ({
       onDragEnd={handleDragEnd}
       onClick={handleSelect}
       onTap={handleSelect}
+      onDblClick={handleDblClick}
+      onDblTap={handleDblClick}
     >
       {renderChairs()}
       {renderShape()}
       
-      {element.label && (
+      {element.label && !isTextBox && (
         <Text
           text={element.label}
-          fontSize={element.type === 'chair' ? 8 : 10}
-          fontFamily="Inter"
+          fontSize={element.fontSize || (element.type === 'chair' ? 8 : 10)}
+          fontFamily={element.fontFamily || 'Inter'}
+          fontStyle={`${element.isItalic ? 'italic ' : ''}${element.isBold !== false ? 'bold' : ''}`.trim() || 'normal'}
           fill={element.type === 'stage' ? '#ffffff' : '#374151'}
-          align="center"
+          align={element.textAlign || 'center'}
           width={element.type === 'chair' ? 60 : 100}
           x={element.type === 'chair' ? -30 : -50}
           y={element.type === 'chair' ? -20 : -5}
-          fontStyle="bold"
         />
       )}
     </Group>

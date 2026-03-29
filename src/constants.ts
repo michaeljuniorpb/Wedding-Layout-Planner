@@ -105,6 +105,12 @@ export const DEFAULT_ELEMENTS: Record<string, Partial<LayoutElement>> = {
     color: '#f3f4f6',
     label: 'Custom Hexagon',
   },
+  'custom-circle': {
+    type: 'custom-circle',
+    radius: 1,
+    color: '#f3f4f6',
+    label: 'Custom Circle',
+  },
   'akad-table': {
     type: 'akad-table',
     width: 1.8,
@@ -112,5 +118,17 @@ export const DEFAULT_ELEMENTS: Record<string, Partial<LayoutElement>> = {
     chairCount: 6,
     color: '#ffffff',
     label: 'Meja Akad',
+  },
+  'text-box': {
+    type: 'text-box',
+    width: 3,
+    height: 1,
+    text: 'Double click to edit text',
+    fontSize: 16,
+    fontFamily: 'Inter',
+    color: '#000000',
+    label: 'Text Box',
+    isBold: false,
+    isItalic: false,
   }
 };

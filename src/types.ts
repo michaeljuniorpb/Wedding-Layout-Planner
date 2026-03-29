@@ -14,7 +14,9 @@ export type ElementType =
   | 'custom-rect'
   | 'custom-triangle'
   | 'custom-hexagon'
-  | 'akad-table';
+  | 'custom-circle'
+  | 'akad-table'
+  | 'text-box';
 
 export interface LayoutElement {
   id: string;
@@ -30,6 +32,12 @@ export interface LayoutElement {
   color?: string;
   label?: string;
   groupId?: string;
+  text?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  textAlign?: 'left' | 'center' | 'right';
+  isBold?: boolean;
+  isItalic?: boolean;
 }
 
 export interface VenueDimensions {

@@ -11,6 +11,7 @@ import { auth, db, signInWithGoogle, logout } from './firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, addDoc, query, where, onSnapshot, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import jsPDF from 'jspdf';
+import { Toaster, toast } from 'sonner';
 
 export default function App() {
   const [elements, setElements] = useState<LayoutElement[]>([]);
@@ -32,6 +33,9 @@ export default function App() {
   const [selectionRect, setSelectionRect] = useState({ x1: 0, y1: 0, x2: 0, y2: 0, visible: false });
   const [persistentRulers, setPersistentRulers] = useState<PersistentRuler[]>([]);
   const [showGrid, setShowGrid] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
+  const [editingPos, setEditingPos] = useState({ x: 0, y: 0, width: 0, height: 0 });
   
   const guidesRef = useRef<GuidesHandle>(null);
   const stageRef = useRef<any>(null);
@@ -112,7 +116,7 @@ export default function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (document.activeElement?.tagName === 'INPUT') return;
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
 
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0) {
         setElements(prev => prev.filter(el => !selectedIds.includes(el.id)));
@@ -140,6 +144,24 @@ export default function App() {
       if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
         handlePaste();
       }
+
+      // Bold: Ctrl+B or Cmd+B
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        const el = elements.find(el => selectedIds.includes(el.id) && (el.type === 'text-box' || el.label));
+        if (el) {
+          updateElement(el.id, { isBold: el.isBold === false ? true : false });
+        }
+      }
+
+      // Italic: Ctrl+I or Cmd+I
+      if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
+        e.preventDefault();
+        const el = elements.find(el => selectedIds.includes(el.id) && (el.type === 'text-box' || el.label));
+        if (el) {
+          updateElement(el.id, { isItalic: !el.isItalic });
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -160,6 +182,12 @@ export default function App() {
       chairCount: defaults.chairCount,
       color: defaults.color,
       label: defaults.label,
+      text: defaults.text,
+      fontSize: defaults.fontSize,
+      fontFamily: defaults.fontFamily,
+      textAlign: defaults.textAlign || 'center',
+      isBold: defaults.isBold || false,
+      isItalic: defaults.isItalic || false,
     };
     setElements([...elements, newElement]);
     setSelectedIds([newElement.id]);
@@ -296,6 +324,46 @@ export default function App() {
     setSelectedIds(newElements.map(el => el.id));
   };
 
+  const bringToFront = () => {
+    if (selectedIds.length === 0) return;
+    const selected = elements.filter(el => selectedIds.includes(el.id));
+    const unselected = elements.filter(el => !selectedIds.includes(el.id));
+    setElements([...unselected, ...selected]);
+  };
+
+  const sendToBack = () => {
+    if (selectedIds.length === 0) return;
+    const selected = elements.filter(el => selectedIds.includes(el.id));
+    const unselected = elements.filter(el => !selectedIds.includes(el.id));
+    setElements([...selected, ...unselected]);
+  };
+
+  const bringForward = () => {
+    if (selectedIds.length === 0) return;
+    const newElements = [...elements];
+    for (let i = newElements.length - 2; i >= 0; i--) {
+      if (selectedIds.includes(newElements[i].id) && !selectedIds.includes(newElements[i+1].id)) {
+        const temp = newElements[i];
+        newElements[i] = newElements[i+1];
+        newElements[i+1] = temp;
+      }
+    }
+    setElements(newElements);
+  };
+
+  const sendBackward = () => {
+    if (selectedIds.length === 0) return;
+    const newElements = [...elements];
+    for (let i = 1; i < newElements.length; i++) {
+      if (selectedIds.includes(newElements[i].id) && !selectedIds.includes(newElements[i-1].id)) {
+        const temp = newElements[i];
+        newElements[i] = newElements[i-1];
+        newElements[i-1] = temp;
+      }
+    }
+    setElements(newElements);
+  };
+
   const ungroupChairs = (tableId: string) => {
     const table = elements.find(el => el.id === tableId);
     if (!table || !table.chairCount || table.chairCount === 0) return;
@@ -408,8 +476,12 @@ export default function App() {
   };
 
   const handleSave = async (name: string) => {
-    if (!user) return;
+    if (!user) {
+      toast.error('Please login to save your layout');
+      return;
+    }
     setIsSaving(true);
+    const toastId = toast.loading('Saving layout...');
     try {
       const layoutData = {
         userId: user.uid,
@@ -421,17 +493,36 @@ export default function App() {
 
       if (currentLayoutId) {
         await updateDoc(doc(db, 'layouts', currentLayoutId), layoutData);
+        toast.success('Layout updated successfully', { id: toastId });
       } else {
         const docRef = await addDoc(collection(db, 'layouts'), {
           ...layoutData,
           createdAt: serverTimestamp(),
         });
         setCurrentLayoutId(docRef.id);
+        toast.success('Layout saved successfully', { id: toastId });
       }
     } catch (error) {
       console.error('Error saving layout:', error);
+      toast.error('Failed to save layout. Please try again.', { id: toastId });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleNewLayout = () => {
+    if (elements.length > 0) {
+      if (window.confirm('Are you sure you want to start a new layout? All unsaved changes will be lost.')) {
+        setElements([]);
+        setCurrentLayoutId(null);
+        setHistory([[]]);
+        setHistoryIndex(0);
+        setSelectedIds([]);
+        toast.success('Started a new layout');
+      }
+    } else {
+      setCurrentLayoutId(null);
+      toast.success('Started a new layout');
     }
   };
 
@@ -667,6 +758,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#f8f9fa]">
+      <Toaster position="top-right" richColors />
       <Sidebar 
         onAddElement={addElement}
         onAddTemplate={addTemplate}
@@ -687,6 +779,7 @@ export default function App() {
         onLogout={logout}
         savedLayouts={savedLayouts}
         onSave={handleSave}
+        onNewLayout={handleNewLayout}
         onLoad={handleLoad}
         onDeleteLayout={handleDeleteLayout}
         isSaving={isSaving}
@@ -695,6 +788,10 @@ export default function App() {
         onUngroup={handleUngroup}
         onCopy={handleCopy}
         onPaste={handlePaste}
+        onBringToFront={bringToFront}
+        onBringForward={bringForward}
+        onSendBackward={sendBackward}
+        onSendToBack={sendToBack}
         onUngroupChairs={ungroupChairs}
         onUndo={undo}
         onRedo={redo}
@@ -825,6 +922,11 @@ export default function App() {
                 onDragStart={handleDragStart}
                 onDragMove={handleCanvasDragMove}
                 onDragEnd={handleCanvasDragEnd}
+                onDblClick={(id, x, y, width, height, text) => {
+                  setEditingId(id);
+                  setEditingText(text);
+                  setEditingPos({ x, y, width, height });
+                }}
                 selectedIds={selectedIds}
                 draggable={!isRulerActive}
               />
@@ -1002,6 +1104,56 @@ export default function App() {
             </Layer>
           ))}
         </Stage>
+
+        {editingId && (
+          <textarea
+            autoFocus
+            value={editingText}
+            onChange={(e) => setEditingText(e.target.value)}
+            onBlur={() => {
+              const el = elements.find(e => e.id === editingId);
+              if (el) {
+                if (el.type === 'text-box') {
+                  updateElement(editingId, { text: editingText });
+                } else {
+                  updateElement(editingId, { label: editingText });
+                }
+              }
+              setEditingId(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.currentTarget.blur();
+              }
+              if (e.key === 'Escape') {
+                setEditingId(null);
+              }
+            }}
+            style={{
+              position: 'absolute',
+              top: editingPos.y,
+              left: editingPos.x,
+              width: editingPos.width,
+              height: editingPos.height,
+              fontSize: (() => {
+                const el = elements.find(e => e.id === editingId);
+                if (!el) return 16;
+                return el.fontSize || (el.type === 'text-box' ? 16 : (el.type === 'chair' ? 8 : 10));
+              })(),
+              fontFamily: 'Inter',
+              fontWeight: elements.find(e => e.id === editingId)?.isBold !== false ? 'bold' : 'normal',
+              fontStyle: elements.find(e => e.id === editingId)?.isItalic ? 'italic' : 'normal',
+              border: '1px solid #d4af37',
+              padding: '5px',
+              boxSizing: 'border-box',
+              background: 'white',
+              zIndex: 1000,
+              resize: 'none',
+              outline: 'none',
+              textAlign: elements.find(e => e.id === editingId)?.textAlign || 'center',
+            }}
+          />
+        )}
 
         {elements.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

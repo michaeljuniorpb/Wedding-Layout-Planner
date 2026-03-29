@@ -1,6 +1,6 @@
 import React from 'react';
 import { LayoutElement, ElementType, VenueDimensions, WeddingLayout } from '../types';
-import { Square, Circle, Layout, Users, Trash2, Plus, Wine, Utensils, Heart, Star, Columns, Armchair, Palette, Ruler, Save, Download, LogOut, LogIn, FileText, Loader2, Copy, ClipboardPaste, Triangle, Hexagon, Undo, Redo, Magnet } from 'lucide-react';
+import { Square, Circle, Layout, Users, Trash2, Plus, Wine, Utensils, Heart, Star, Columns, Armchair, Palette, Ruler, Save, Download, LogOut, LogIn, FileText, Loader2, Copy, ClipboardPaste, Triangle, Hexagon, Undo, Redo, Magnet, Type, AlignLeft, AlignCenter, AlignRight, Bold, Italic, Layers, ArrowUp, ArrowDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { User } from 'firebase/auth';
 
 interface SidebarProps {
@@ -20,6 +20,7 @@ interface SidebarProps {
   onLogout: () => void;
   savedLayouts: WeddingLayout[];
   onSave: (name: string) => void;
+  onNewLayout: () => void;
   onLoad: (layout: WeddingLayout) => void;
   onDeleteLayout: (id: string) => void;
   isSaving: boolean;
@@ -40,6 +41,10 @@ interface SidebarProps {
   showGrid: boolean;
   onToggleGrid: () => void;
   onClearRulers: () => void;
+  onBringToFront: () => void;
+  onBringForward: () => void;
+  onSendBackward: () => void;
+  onSendToBack: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -59,6 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onLogout,
   savedLayouts,
   onSave,
+  onNewLayout,
   onLoad,
   onDeleteLayout,
   isSaving,
@@ -78,7 +84,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   hasGroupedSelection,
   showGrid,
   onToggleGrid,
-  onClearRulers
+  onClearRulers,
+  onBringToFront,
+  onBringForward,
+  onSendBackward,
+  onSendToBack
 }) => {
   const [layoutName, setLayoutName] = React.useState('My Wedding Layout');
   return (
@@ -145,6 +155,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {user ? (
               <>
                 <div className="flex gap-2">
+                  <button 
+                    onClick={onNewLayout}
+                    className="p-2 bg-white border border-gray-200 text-gray-400 rounded-lg hover:border-[#d4af37] hover:text-[#d4af37] transition-all"
+                    title="New Layout"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
                   <input 
                     type="text" 
                     value={layoutName}
@@ -155,36 +172,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <button 
                     onClick={() => onSave(layoutName)}
                     disabled={isSaving}
-                    className="p-2 bg-[#d4af37] text-white rounded-lg hover:bg-[#b8962e] disabled:opacity-50 transition-colors"
+                    className="p-2 bg-[#d4af37] text-white rounded-lg hover:bg-[#b8962e] disabled:opacity-50 transition-colors flex items-center justify-center min-w-[40px]"
+                    title="Save Layout"
                   >
                     {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   </button>
                 </div>
                 
                 {savedLayouts.length > 0 && (
-                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
-                    {savedLayouts.map((layout) => (
-                      <div key={layout.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg group">
-                        <button 
-                          onClick={() => {
-                            onLoad(layout);
-                            setLayoutName(layout.name);
-                          }}
-                          className="flex-1 text-left overflow-hidden"
-                        >
-                          <p className="text-[10px] font-bold truncate">{layout.name}</p>
-                          <p className="text-[8px] text-gray-400">
-                            {layout.updatedAt?.toDate ? layout.updatedAt.toDate().toLocaleDateString() : 'Just now'}
-                          </p>
-                        </button>
-                        <button 
-                          onClick={() => onDeleteLayout(layout.id!)}
-                          className="p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Saved Layouts</p>
+                      <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{savedLayouts.length}</span>
+                    </div>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                      {savedLayouts.map((layout) => (
+                        <div key={layout.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg group hover:bg-orange-50 transition-colors border border-transparent hover:border-orange-100">
+                          <button 
+                            onClick={() => {
+                              onLoad(layout);
+                              setLayoutName(layout.name);
+                            }}
+                            className="flex-1 text-left overflow-hidden"
+                          >
+                            <p className="text-[10px] font-bold truncate group-hover:text-[#d4af37] transition-colors">{layout.name}</p>
+                            <p className="text-[8px] text-gray-400">
+                              {layout.updatedAt?.toDate ? layout.updatedAt.toDate().toLocaleDateString() : 'Just now'}
+                            </p>
+                          </button>
+                          <button 
+                            onClick={() => onDeleteLayout(layout.id!)}
+                            className="p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                            title="Delete Layout"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </>
@@ -278,6 +303,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <Users className="w-6 h-6 mb-2 text-gray-400 group-hover:text-[#d4af37]" />
               <span className="text-[10px] font-medium uppercase tracking-tighter">Akad Table</span>
+            </button>
+            <button 
+              onClick={() => onAddElement('text-box')}
+              className="flex flex-col items-center justify-center p-4 border border-gray-100 rounded-xl hover:border-[#d4af37] hover:bg-orange-50 transition-all group"
+            >
+              <Type className="w-6 h-6 mb-2 text-gray-400 group-hover:text-[#d4af37]" />
+              <span className="text-[10px] font-medium uppercase tracking-tighter">Text Box</span>
             </button>
           </div>
         </section>
@@ -416,6 +448,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               <span className="text-xs font-medium text-gray-600">Hexagon</span>
             </button>
+            <button onClick={() => onAddElement('custom-circle')} className="flex items-center gap-2 p-3 bg-white border border-gray-100 rounded-xl hover:border-[#d4af37] hover:shadow-md transition-all group">
+              <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center group-hover:bg-[#fdf8e6]">
+                <Circle className="w-4 h-4 text-gray-400 group-hover:text-[#d4af37]" />
+              </div>
+              <span className="text-xs font-medium text-gray-600">Circle</span>
+            </button>
           </div>
         </section>
 
@@ -544,16 +582,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 />
               </div>
 
-              {(selectedElement.type === 'round-table' || selectedElement.type === 'cake-table' || selectedElement.type === 'custom-triangle' || selectedElement.type === 'custom-hexagon') && (
+              {(selectedElement.type === 'round-table' || selectedElement.type === 'cake-table' || selectedElement.type === 'custom-triangle' || selectedElement.type === 'custom-hexagon' || selectedElement.type === 'custom-circle') && (
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">
-                    {selectedElement.type === 'custom-triangle' || selectedElement.type === 'custom-hexagon' ? 'Size (Radius m)' : 'Diameter (m)'}
+                    {selectedElement.type === 'custom-triangle' || selectedElement.type === 'custom-hexagon' || selectedElement.type === 'custom-circle' ? 'Size (Radius m)' : 'Diameter (m)'}
                   </label>
                   <input 
                     type="number" 
                     step="0.1"
-                    value={selectedElement.type === 'custom-triangle' || selectedElement.type === 'custom-hexagon' ? selectedElement.radius : (selectedElement.radius || 0) * 2} 
-                    onChange={(e) => onUpdate(selectedElement.id, { radius: selectedElement.type === 'custom-triangle' || selectedElement.type === 'custom-hexagon' ? parseFloat(e.target.value) : parseFloat(e.target.value) / 2 })}
+                    value={selectedElement.type === 'custom-triangle' || selectedElement.type === 'custom-hexagon' || selectedElement.type === 'custom-circle' ? selectedElement.radius : (selectedElement.radius || 0) * 2} 
+                    onChange={(e) => onUpdate(selectedElement.id, { radius: selectedElement.type === 'custom-triangle' || selectedElement.type === 'custom-hexagon' || selectedElement.type === 'custom-circle' ? parseFloat(e.target.value) : parseFloat(e.target.value) / 2 })}
                     className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#d4af37]"
                   />
                 </div>
@@ -570,7 +608,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 selectedElement.type === 'centerpiece' ||
                 selectedElement.type === 'custom-rect' ||
                 selectedElement.type === 'chair' ||
-                selectedElement.type === 'akad-table') && (
+                selectedElement.type === 'akad-table' ||
+                selectedElement.type === 'text-box') && (
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Width (m)</label>
@@ -643,6 +682,115 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
               </div>
             )}
+
+              {selectedElement.type === 'text-box' && (
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Text Content</label>
+                  <textarea 
+                    value={selectedElement.text || ''} 
+                    onChange={(e) => onUpdate(selectedElement.id, { text: e.target.value })}
+                    className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#d4af37] min-h-[80px]"
+                  />
+                </div>
+              )}
+
+              {(selectedElement.type === 'text-box' || selectedElement.label) && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Font Size</label>
+                      <input 
+                        type="number" 
+                        value={selectedElement.fontSize || (selectedElement.type === 'text-box' ? 16 : (selectedElement.type === 'chair' ? 8 : 10))} 
+                        onChange={(e) => onUpdate(selectedElement.id, { fontSize: parseInt(e.target.value) })}
+                        className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#d4af37]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Alignment</label>
+                      <div className="flex border border-gray-200 rounded-lg overflow-hidden">
+                        <button 
+                          onClick={() => onUpdate(selectedElement.id, { textAlign: 'left' })}
+                          className={`flex-1 p-2 flex justify-center ${selectedElement.textAlign === 'left' ? 'bg-orange-50 text-[#d4af37]' : 'bg-white text-gray-400'}`}
+                        >
+                          <AlignLeft className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => onUpdate(selectedElement.id, { textAlign: 'center' })}
+                          className={`flex-1 p-2 flex justify-center border-x border-gray-200 ${(selectedElement.textAlign === 'center' || !selectedElement.textAlign) ? 'bg-orange-50 text-[#d4af37]' : 'bg-white text-gray-400'}`}
+                        >
+                          <AlignCenter className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => onUpdate(selectedElement.id, { textAlign: 'right' })}
+                          className={`flex-1 p-2 flex justify-center ${selectedElement.textAlign === 'right' ? 'bg-orange-50 text-[#d4af37]' : 'bg-white text-gray-400'}`}
+                        >
+                          <AlignRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Style</label>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => onUpdate(selectedElement.id, { isBold: selectedElement.isBold === false ? true : false })}
+                        className={`flex-1 p-2 border rounded-lg flex items-center justify-center gap-2 transition-all ${selectedElement.isBold !== false ? 'bg-[#d4af37] border-[#d4af37] text-white' : 'border-gray-200 text-gray-400 hover:border-[#d4af37] hover:bg-orange-50'}`}
+                      >
+                        <Bold className="w-4 h-4" />
+                        <span className="text-[10px] font-bold uppercase">Bold</span>
+                      </button>
+                      <button 
+                        onClick={() => onUpdate(selectedElement.id, { isItalic: !selectedElement.isItalic })}
+                        className={`flex-1 p-2 border rounded-lg flex items-center justify-center gap-2 transition-all ${selectedElement.isItalic ? 'bg-[#d4af37] border-[#d4af37] text-white' : 'border-gray-200 text-gray-400 hover:border-[#d4af37] hover:bg-orange-50'}`}
+                      >
+                        <Italic className="w-4 h-4" />
+                        <span className="text-[10px] font-bold uppercase">Italic</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 flex items-center gap-1">
+                  <Layers className="w-3 h-3" /> Position
+                </label>
+                <div className="grid grid-cols-4 gap-1">
+                  <button 
+                    onClick={onBringToFront}
+                    className="p-2 border border-gray-200 rounded-lg flex flex-col items-center justify-center gap-1 hover:border-[#d4af37] hover:bg-orange-50 transition-all text-gray-400 hover:text-[#d4af37]"
+                    title="Bring to Front"
+                  >
+                    <ArrowUp className="w-4 h-4" />
+                    <span className="text-[8px] font-bold uppercase">Front</span>
+                  </button>
+                  <button 
+                    onClick={onBringForward}
+                    className="p-2 border border-gray-200 rounded-lg flex flex-col items-center justify-center gap-1 hover:border-[#d4af37] hover:bg-orange-50 transition-all text-gray-400 hover:text-[#d4af37]"
+                    title="Bring Forward"
+                  >
+                    <ChevronUp className="w-4 h-4" />
+                    <span className="text-[8px] font-bold uppercase">Forward</span>
+                  </button>
+                  <button 
+                    onClick={onSendBackward}
+                    className="p-2 border border-gray-200 rounded-lg flex flex-col items-center justify-center gap-1 hover:border-[#d4af37] hover:bg-orange-50 transition-all text-gray-400 hover:text-[#d4af37]"
+                    title="Send Backward"
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                    <span className="text-[8px] font-bold uppercase">Backward</span>
+                  </button>
+                  <button 
+                    onClick={onSendToBack}
+                    className="p-2 border border-gray-200 rounded-lg flex flex-col items-center justify-center gap-1 hover:border-[#d4af37] hover:bg-orange-50 transition-all text-gray-400 hover:text-[#d4af37]"
+                    title="Send to Back"
+                  >
+                    <ArrowDown className="w-4 h-4" />
+                    <span className="text-[8px] font-bold uppercase">Back</span>
+                  </button>
+                </div>
+              </div>
 
               <div>
                 <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 flex items-center gap-1">
