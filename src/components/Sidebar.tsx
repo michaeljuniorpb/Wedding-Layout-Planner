@@ -1,6 +1,6 @@
 import React from 'react';
 import { LayoutElement, ElementType, VenueDimensions, WeddingLayout } from '../types';
-import { Square, Circle, Layout, Users, Trash2, Plus, Wine, Utensils, Heart, Star, Columns, Armchair, Palette, Ruler, Save, Download, LogOut, LogIn, FileText, Loader2, Copy, ClipboardPaste, Triangle, Hexagon } from 'lucide-react';
+import { Square, Circle, Layout, Users, Trash2, Plus, Wine, Utensils, Heart, Star, Columns, Armchair, Palette, Ruler, Save, Download, LogOut, LogIn, FileText, Loader2, Copy, ClipboardPaste, Triangle, Hexagon, Undo, Redo, Magnet } from 'lucide-react';
 import { User } from 'firebase/auth';
 
 interface SidebarProps {
@@ -28,8 +28,18 @@ interface SidebarProps {
   onUngroup: () => void;
   onCopy: () => void;
   onPaste: () => void;
+  onUngroupChairs: (tableId: string) => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  isSnappingEnabled: boolean;
+  onToggleSnapping: () => void;
   hasClipboard: boolean;
   hasGroupedSelection: boolean;
+  showGrid: boolean;
+  onToggleGrid: () => void;
+  onClearRulers: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -57,8 +67,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onUngroup,
   onCopy,
   onPaste,
+  onUngroupChairs,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
+  isSnappingEnabled,
+  onToggleSnapping,
   hasClipboard,
-  hasGroupedSelection
+  hasGroupedSelection,
+  showGrid,
+  onToggleGrid,
+  onClearRulers
 }) => {
   const [layoutName, setLayoutName] = React.useState('My Wedding Layout');
   return (
@@ -85,6 +105,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <LogIn className="w-3 h-3" /> Login
             </button>
           )}
+        </div>
+
+        <div className="flex gap-2 mb-4">
+          <button 
+            onClick={onUndo}
+            disabled={!canUndo}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border text-[10px] font-bold uppercase transition-all ${canUndo ? 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50' : 'bg-gray-50 border-gray-100 text-gray-300 cursor-not-allowed'}`}
+            title="Undo (Ctrl+Z)"
+          >
+            <Undo className="w-3 h-3" /> Undo
+          </button>
+          <button 
+            onClick={onRedo}
+            disabled={!canRedo}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border text-[10px] font-bold uppercase transition-all ${canRedo ? 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50' : 'bg-gray-50 border-gray-100 text-gray-300 cursor-not-allowed'}`}
+            title="Redo (Ctrl+Y)"
+          >
+            <Redo className="w-3 h-3" /> Redo
+          </button>
         </div>
 
         {user && (
@@ -233,6 +272,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Circle className="w-6 h-6 mb-2 text-gray-400 group-hover:text-[#d4af37] fill-yellow-50" />
               <span className="text-[10px] font-medium uppercase tracking-tighter">Cake Table</span>
             </button>
+            <button 
+              onClick={() => onAddElement('akad-table')}
+              className="flex flex-col items-center justify-center p-4 border border-gray-100 rounded-xl hover:border-[#d4af37] hover:bg-orange-50 transition-all group"
+            >
+              <Users className="w-6 h-6 mb-2 text-gray-400 group-hover:text-[#d4af37]" />
+              <span className="text-[10px] font-medium uppercase tracking-tighter">Akad Table</span>
+            </button>
           </div>
         </section>
 
@@ -304,13 +350,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <h2 className="text-xs font-mono text-gray-400 uppercase tracking-wider mb-4">Tools</h2>
           <div className="grid grid-cols-1 gap-3">
             <button 
+              onClick={onToggleSnapping}
+              className={`flex items-center p-3 border rounded-xl transition-all group ${isSnappingEnabled ? 'bg-[#d4af37] border-[#d4af37] text-white' : 'border-gray-100 hover:border-[#d4af37] hover:bg-orange-50 text-gray-600'}`}
+            >
+              <Magnet className={`w-5 h-5 mr-3 ${isSnappingEnabled ? 'text-white' : 'text-gray-400 group-hover:text-[#d4af37]'}`} />
+              <div>
+                <span className="block text-xs font-bold">Smart Snapping</span>
+                <span className={`block text-[10px] ${isSnappingEnabled ? 'text-white/80' : 'text-gray-400'}`}>{isSnappingEnabled ? 'Alignment guides active' : 'Free placement mode'}</span>
+              </div>
+            </button>
+            <button 
               onClick={onToggleRuler}
               className={`flex items-center p-3 border rounded-xl transition-all group ${isRulerActive ? 'bg-[#d4af37] border-[#d4af37] text-white' : 'border-gray-100 hover:border-[#d4af37] hover:bg-orange-50 text-gray-600'}`}
             >
               <Ruler className={`w-5 h-5 mr-3 ${isRulerActive ? 'text-white' : 'text-gray-400 group-hover:text-[#d4af37]'}`} />
               <div>
                 <span className="block text-xs font-bold">Measurement Ruler</span>
-                <span className={`block text-[10px] ${isRulerActive ? 'text-white/80' : 'text-gray-400'}`}>Click and drag to measure distance</span>
+                <span className={`block text-[10px] ${isRulerActive ? 'text-white/80' : 'text-gray-400'}`}>Click and drag to place a persistent ruler</span>
+              </div>
+            </button>
+            {onClearRulers && (
+              <button 
+                onClick={onClearRulers}
+                className="flex items-center p-3 border border-gray-100 rounded-xl hover:border-red-200 hover:bg-red-50 text-gray-600 transition-all group"
+              >
+                <Trash2 className="w-5 h-5 mr-3 text-gray-400 group-hover:text-red-500" />
+                <div>
+                  <span className="block text-xs font-bold">Clear All Rulers</span>
+                  <span className="block text-[10px] text-gray-400">Remove all measurement lines</span>
+                </div>
+              </button>
+            )}
+            <button 
+              onClick={onToggleGrid}
+              className={`flex items-center p-3 border rounded-xl transition-all group ${showGrid ? 'bg-[#d4af37] border-[#d4af37] text-white' : 'border-gray-100 hover:border-[#d4af37] hover:bg-orange-50 text-gray-600'}`}
+            >
+              <Layout className={`w-5 h-5 mr-3 ${showGrid ? 'text-white' : 'text-gray-400 group-hover:text-[#d4af37]'}`} />
+              <div>
+                <span className="block text-xs font-bold">Venue Grid</span>
+                <span className={`block text-[10px] ${showGrid ? 'text-white/80' : 'text-gray-400'}`}>{showGrid ? 'Grid lines visible' : 'Grid lines hidden'}</span>
               </div>
             </button>
           </div>
@@ -491,7 +569,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 selectedElement.type === 'vip-table' ||
                 selectedElement.type === 'centerpiece' ||
                 selectedElement.type === 'custom-rect' ||
-                selectedElement.type === 'chair') && (
+                selectedElement.type === 'chair' ||
+                selectedElement.type === 'akad-table') && (
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Width (m)</label>
@@ -516,7 +595,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               )}
 
-              {(selectedElement.type === 'round-table' || selectedElement.type === 'long-table' || selectedElement.type === 'vip-table') && (
+              {(selectedElement.type === 'round-table' || selectedElement.type === 'long-table' || selectedElement.type === 'vip-table' || selectedElement.type === 'akad-table') && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Chair Count</label>
@@ -529,7 +608,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                   
                   {selectedElement.chairCount && selectedElement.chairCount > 0 && (
-                    <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <div className="space-y-4">
+                      <button
+                        onClick={() => onUngroupChairs(selectedElement.id)}
+                        className="w-full py-2 px-4 bg-white border border-[#d4af37] text-[#d4af37] rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-orange-50 transition-all flex items-center justify-center gap-2"
+                      >
+                        <Armchair className="w-3 h-3" /> Ungroup Chairs to Manual
+                      </button>
+
+                      <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
                       <label className="block text-[10px] font-bold uppercase text-gray-400 mb-2 flex items-center gap-1">
                         <Users className="w-3 h-3" /> Seating List (Guest Names)
                       </label>
@@ -552,9 +639,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         ))}
                       </div>
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
+            )}
 
               <div>
                 <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 flex items-center gap-1">

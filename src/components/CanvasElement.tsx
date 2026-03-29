@@ -9,6 +9,7 @@ interface ElementProps {
   onChange: (newAttrs: Partial<LayoutElement>) => void;
   onUpdateMany: (newAttrs: Partial<LayoutElement>) => void;
   onMoveMany: (dx: number, dy: number) => void;
+  onDragStart?: (id: string) => void;
   onDragMove?: (id: string, x: number, y: number) => void;
   onDragEnd?: (id: string, x: number, y: number) => void;
   selectedIds: string[];
@@ -22,17 +23,17 @@ export const CanvasElement: React.FC<ElementProps> = ({
   onChange,
   onUpdateMany,
   onMoveMany,
+  onDragStart,
   onDragMove,
   onDragEnd,
   selectedIds,
   draggable = true
 }) => {
   const isRound = element.type === 'round-table' || element.type === 'cake-table' || element.type === 'custom-hexagon' || element.type === 'custom-triangle';
-  const dragStartPos = React.useRef<{ x: number, y: number } | null>(null);
   
   const handleDragStart = (e: any) => {
-    if (isSelected) {
-      dragStartPos.current = { x: e.target.x(), y: e.target.y() };
+    if (onDragStart) {
+      onDragStart(element.id);
     }
   };
 
@@ -43,24 +44,6 @@ export const CanvasElement: React.FC<ElementProps> = ({
     if (onDragMove) {
       onDragMove(element.id, newX, newY);
     }
-
-    if (!isSelected || selectedIds.length <= 1 || !dragStartPos.current) return;
-
-    const dx = e.target.x() - dragStartPos.current.x;
-    const dy = e.target.y() - dragStartPos.current.y;
-
-    // Move other selected elements visually
-    const stage = e.target.getStage();
-    selectedIds.forEach(id => {
-      if (id === element.id) return;
-      const node = stage.findOne(`#${id}`);
-      if (node) {
-        // We use the element's current state position + delta
-        const el = (node as any).attrs.elementData;
-        node.x(el.x + dx);
-        node.y(el.y + dy);
-      }
-    });
   };
 
   const handleDragEnd = (e: any) => {
@@ -69,19 +52,6 @@ export const CanvasElement: React.FC<ElementProps> = ({
 
     if (onDragEnd) {
       onDragEnd(element.id, newX, newY);
-    }
-
-    if (isSelected && selectedIds.length > 1 && dragStartPos.current) {
-      const dx = e.target.x() - dragStartPos.current.x;
-      const dy = e.target.y() - dragStartPos.current.y;
-      
-      onMoveMany(dx, dy);
-      dragStartPos.current = null;
-    } else {
-      onChange({
-        x: e.target.x(),
-        y: e.target.y(),
-      });
     }
   };
 
@@ -131,6 +101,66 @@ export const CanvasElement: React.FC<ElementProps> = ({
                 offsetX={30}
                 offsetY={4}
                 rotation={(angle * 180) / Math.PI + 90}
+              />
+            )}
+          </Group>
+        );
+      }
+    } else if (element.type === 'akad-table') {
+      const w = element.width * SCALE;
+      const h = element.height * SCALE;
+      
+      // Specific layout for Akad Table: 2 top, 2 bottom, 1 left, 1 right
+      // We'll use a pattern based on index
+      for (let i = 0; i < count; i++) {
+        let cx = 0;
+        let cy = 0;
+        const label = element.chairLabels?.[i];
+        
+        if (i < 2) { // Top
+          cx = (i === 0 ? -w/4 : w/4) - chairSize / 2;
+          cy = -h/2 - chairSize - 5;
+        } else if (i < 4) { // Bottom
+          cx = (i === 2 ? -w/4 : w/4) - chairSize / 2;
+          cy = h/2 + 5;
+        } else if (i === 4) { // Left
+          cx = -w/2 - chairSize - 5;
+          cy = -chairSize / 2;
+        } else if (i === 5) { // Right
+          cx = w/2 + 5;
+          cy = -chairSize / 2;
+        } else {
+          // Fallback for more than 6 chairs: distribute on sides
+          const side = i % 4;
+          const offset = Math.floor(i / 4) * 20;
+          if (side === 0) { cx = -w/2 + offset; cy = -h/2 - chairSize - 5; }
+          else if (side === 1) { cx = -w/2 + offset; cy = h/2 + 5; }
+          else if (side === 2) { cx = -w/2 - chairSize - 5; cy = -h/2 + offset; }
+          else { cx = w/2 + 5; cy = -h/2 + offset; }
+        }
+
+        chairs.push(
+          <Group key={`chair-group-${i}`}>
+            <Rect
+              x={cx}
+              y={cy}
+              width={chairSize}
+              height={chairSize}
+              fill="#e5e7eb"
+              stroke="#9ca3af"
+              strokeWidth={1}
+              cornerRadius={4}
+            />
+            {label && (
+              <Text
+                text={label}
+                x={cx + chairSize / 2}
+                y={cy < -h/2 ? cy - 10 : cy + chairSize + 2}
+                fontSize={8}
+                fill="#6b7280"
+                align="center"
+                width={60}
+                offsetX={30}
               />
             )}
           </Group>

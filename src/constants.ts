@@ -104,5 +104,13 @@ export const DEFAULT_ELEMENTS: Record<string, Partial<LayoutElement>> = {
     radius: 1, // radius for RegularPolygon
     color: '#f3f4f6',
     label: 'Custom Hexagon',
+  },
+  'akad-table': {
+    type: 'akad-table',
+    width: 1.8,
+    height: 0.9,
+    chairCount: 6,
+    color: '#ffffff',
+    label: 'Meja Akad',
   }
 };

@@ -13,7 +13,8 @@ export type ElementType =
   | 'vip-table'
   | 'custom-rect'
   | 'custom-triangle'
-  | 'custom-hexagon';
+  | 'custom-hexagon'
+  | 'akad-table';
 
 export interface LayoutElement {
   id: string;
@@ -44,6 +45,12 @@ export interface WeddingLayout {
   venueDimensions: VenueDimensions;
   createdAt?: any;
   updatedAt?: any;
+}
+
+export interface PersistentRuler {
+  id: string;
+  p1: { x: number; y: number };
+  p2: { x: number; y: number };
 }
 
 export const SCALE = 50; // 1 meter = 50 pixels
